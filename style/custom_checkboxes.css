@@ -1,0 +1,84 @@
+/*
+	Custom Crossbrowser Styling for Checkboxes
+	------------------------------------------------------------
+	created by Martin Ivanov
+	http://wemakesites.net
+	http://acidjs.wemakesites.net
+	http://acidmartin.wordpress.com
+
+	Supported Browsers:
+	- Mozilla FireFox
+	- Google Chrome
+	- Apple Safari
+	- Opera
+	- Internet Explorer 9
+
+	- Older browsers degrade gracefully displaying browsers' default checkboxes
+*/
+
+/* hide the real form element by opacity: 0 and position: absolute - display: block and visibility: hidden do not work because then form elements cannot get the focus and actually get checked or unchecked */
+.skinned-form-controls input[type="checkbox"]
+{
+	position: absolute;
+	-moz-opacity: 0;
+	-webkit-opacity: 0;
+	opacity: 0;
+}
+
+/* prevent the entire page from scrolling if there is overflow and checkbox or radio button are clicked */
+.skinned-form-controls label
+{
+	position: relative;
+}
+
+/* fallback for IE6, IE7 and IE8 */
+.skinned-form-controls input[type="checkbox"]
+{
+	position: static\9;
+}
+
+.skinned-form-controls input[type="checkbox"] + span::before
+{
+	content: "";
+	display: inline-block;
+	width: 20px;
+	height: 25px;
+	vertical-align: middle;
+	background-repeat: no-repeat;
+}
+
+.skinned-form-controls input[type="checkbox"]:checked + span::before
+{
+	background-position: 0 -25px;
+}
+
+/* disabled form elements */
+.skinned-form-controls input[type="checkbox"]:disabled + span,
+.skinned-form-controls input[type="checkbox"]:disabled + span::before
+{
+	-moz-opacity: .6;
+	-webkit-opacity: .6;
+	opacity: .6;
+}
+
+/* focused and active form elements */
+.skinned-form-controls input[type="checkbox"]:focus + span::before,
+.skinned-form-controls input[type="checkbox"]:active + span::before
+{
+	outline: dotted 1px #ccc;
+}
+
+/* skin-specific sprite */
+.skinned-form-controls.skinned-form-controls-sprite input[type="checkbox"] + span::before
+{
+	background-image: url('../images/checkbox_sprite_transparent.png');
+}
+
+/* turn off indent and wrap text neatly */
+.skinned-form-controls ul
+{
+	list-style-type: none;
+	padding-left: 26px;
+	margin-left: 0;
+	text-indent: -26px;
+}
