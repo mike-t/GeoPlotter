@@ -563,7 +563,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		}
 
 		// make the request
-		XMLRequest.open("GET", "data_connector/phossil.php" + queryString, true);
+		XMLRequest.open("GET", "data_connectors/phossil.php" + queryString, true);
 		XMLRequest.send(null);
 	}
 	// ========================================

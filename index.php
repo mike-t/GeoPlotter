@@ -20,6 +20,7 @@
 // * stick directions in a tab
 // * protect data_connector from being run by any other source/script (using a key along with referrer)
 // * initialise should require the name of the control div and the map div
+// * error handling to show error in place of loading for fatals.
 // ============================================
 
 // initialise variables
