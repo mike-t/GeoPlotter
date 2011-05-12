@@ -75,51 +75,15 @@ mysql_close($db);
 		<script type="text/javascript" charset="utf-8">
 
 		// our custom style to apply to GeoPlotter map
-		var mapStyle = [
-			  {
-				featureType: "administrative",
-				elementType: "all",
-				stylers: [
-				  { visibility: "off" }
-				]
-			  },{
-				featureType: "landscape",
-				elementType: "all",
-				stylers: [
-				  { visibility: "off" },
-				  { hue: "#b7b7b7" },
-				  { saturation: -50 },
-				  { lightness: -70 }
-				]
-			  },{
-				featureType: "poi",
-				elementType: "all",
-				stylers: [
-				  { visibility: "off" }
-				]
-			  },{
-				featureType: "road",
-				elementType: "all",
-				stylers: [
-				  { visibility: "off" }
-				]
-			  },{
-				featureType: "transit",
-				elementType: "all",
-				stylers: [
-				  { visibility: "off" }
-				]
-			  },{
-				featureType: "water",
-				elementType: "all",
-				stylers: [
-				  { visibility: "simplified" },
-				  { hue: "#ffffff" },
-				  { saturation: -100 },
-				  { lightness: 100 }
-				]
-			  }
-			];
+		var mapStyle = [{
+			featureType: 'all',
+			stylers: [
+				{hue: '#0000b0'},
+				{invert_lightness: 'true'},
+				{saturation: -30}
+			]
+		}];
+		
 		// Create the Geoplotter object now.
 		// allows us to create the onlick events.
 		var gp = new GeoPlotter('gp');
@@ -134,7 +98,7 @@ mysql_close($db);
 						
 			// Optional GeoPlotter settings
 			gp.setDebug(true, 'debug_window');
-			gp.setMapStyle(mapStyle);
+			//gp.setMapStyle(mapStyle);
 			gp.setLocationMarker('images/IFA_dot.png', 10, 10);
 			gp.setHomeMarker('images/HOME_dot.png', 15, 15);
 

@@ -69,39 +69,18 @@ function GeoPlotter(instanceName) {
 	var radius = '';
 	var minZoom = 6;
 	var first_run = true;
-	var mapStyle = [		// default style to apply to Google map
+	var mapStyle = [		// default Geoplotter style to apply to Google map
 	  {
-		featureType: "administrative",
-		elementType: "all",
+		featureType: "all",
 		stylers: [
 		  { visibility: "off" }
 		]
 	  },{
 		featureType: "landscape",
-		elementType: "all",
 		stylers: [
-		  { visibility: "off" },
 		  { hue: "#b7b7b7" },
 		  { saturation: -100 },
 		  { lightness: -70 }
-		]
-	  },{
-		featureType: "poi",
-		elementType: "all",
-		stylers: [
-		  { visibility: "off" }
-		]
-	  },{
-		featureType: "road",
-		elementType: "all",
-		stylers: [
-		  { visibility: "off" }
-		]
-	  },{
-		featureType: "transit",
-		elementType: "all",
-		stylers: [
-		  { visibility: "off" }
 		]
 	  },{
 		featureType: "water",
