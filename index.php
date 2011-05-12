@@ -88,7 +88,7 @@ mysql_close($db);
 				stylers: [
 				  { visibility: "off" },
 				  { hue: "#b7b7b7" },
-				  { saturation: -100 },
+				  { saturation: -50 },
 				  { lightness: -70 }
 				]
 			  },{
@@ -133,9 +133,10 @@ mysql_close($db);
 			$("input, textarea, select, button").uniform();	
 						
 			// Optional GeoPlotter settings
-			gp.setDebug(true, 'debug_window');			
+			gp.setDebug(true, 'debug_window');
+			gp.setMapStyle(mapStyle);
 			gp.setLocationMarker('images/IFA_dot.png', 10, 10);
-			gp.setHomeMarker('images/HOME_dot.png', 15, 10);
+			gp.setHomeMarker('images/HOME_dot.png', 15, 15);
 
 			// Required GeoPlotter settings (currently!)
 			gp.dataConnector = 'data_connectors/phossil.php';

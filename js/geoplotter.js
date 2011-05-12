@@ -243,8 +243,12 @@ function GeoPlotter(instanceName) {
 		// name the map and set it in use with provided style
 		var styledMapOptions = {name: "GeoPlotter Map"};		
 		var myMapType = new google.maps.StyledMapType(mapStyle, styledMapOptions);
-		map.mapTypes.set('GeoPlotterStyle', myMapType);
-		map.setMapTypeId('GeoPlotterStyle');
+
+		// if the map object exists yet change it's style
+		if (typeof map !== 'undefined') {
+			map.mapTypes.set('GeoPlotterStyle', myMapType);
+			map.setMapTypeId('GeoPlotterStyle');
+		}
 	}
 
 	// ========================================
