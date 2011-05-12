@@ -1,5 +1,5 @@
 // ============================================
-// Geoplotter Engine v.3.0
+// Geoplotter API v.3.0
 // ============================================
 // AUTHOR: Michael Walton
 // UPDATED: 12.04.2011
@@ -10,7 +10,14 @@
 // DESC: Uses Google Maps API v3 for styled spatial 
 // data mapping.
 //
-// USAGE: GeoPlotter(name, id_of_map_div, id_of_control_div)
+// USAGE: GeoPlotter(instanceName)
+//
+// NOTES: Tries to use traditional OO approach
+//	  rather then protoypting. Users of this
+// 	  class will 99% of the time only creating
+//	  1 instance of the class and therefore
+// 	  memory advantages of prototyping are
+//	  moot at this stage of the project.
 //
 // ============================================
 
@@ -22,16 +29,18 @@
 // I'm enlightened of a neat, cross browser
 // alternative.
 // ============================================
-function GeoPlotter(instanceName, mapDiv, controlDiv) {
+function GeoPlotter(instanceName) {
 
 	// ========================================
-	// TURN ON OR OFF DEBUGGING
+	// TURN ON OR OFF DEBUGGING (DEFAULT)
+	// Use setDebug to change this mode.
+	//
 	// WARNING: Significantly increases loading
 	// time.
-	// Have turned off some success messages to
+	// Have disabled some success messages to
 	// mitigte this. MW 11/04/2011
 	// ========================================
-	var debug = true;
+	var debug = false;
 
 	// ========================================
 	// OUR HOME LOCATION (To be autodetected later)
@@ -59,7 +68,6 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 	var circle;
 	var radius = '';
 	var minZoom = 6;
-	var currentDestinationIndex = 0;
 	var first_run = true;
 	var myStyleSettings = [
 	  {
@@ -107,7 +115,11 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		]
 	  }
 	];
+	
 	// ========================================
+	// INITIALISE PUBLIC PROPERTIES
+	// ========================================
+	this.dataConnector = 'data_connectors/phossil.php';
 	
 	// ========================================	
 	// PUBLIC CONSTUCTORS FOR PRIVATE METHODS
@@ -124,97 +136,117 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 	// ========================================
 	this.initialise = function () {
 		
-		//check we have required arguments to begin...
-		//if( arguments.length )
-		
-		// show the loading message
-		showLoading();
-		
-		// set the options for the map
-		var myOptions = {
-			mapTypeIds: [google.maps.MapTypeId.ROADMAP, 'myStyle'],
-			panControl: false,
-			zoomControl: false,
-			mapTypeControl: false,
-			scaleControl: false,
-			streetViewControl: false,
-			minZoom: minZoom,
-		};
-		
-		// create a new map
-		map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
-		
-		// create a geocoder for converting addresses to locations
-		geocoder = new google.maps.Geocoder();
+		// check we have required arguments to begin...
+		if (checkRequirements()) {
+			
+			// show the loading message
+			showLoading();
+			
+			// set the options for the map
+			var myOptions = {
+				mapTypeIds: [google.maps.MapTypeId.ROADMAP, 'myStyle'],
+				panControl: false,
+				zoomControl: false,
+				mapTypeControl: false,
+				scaleControl: false,
+				streetViewControl: false,
+				minZoom: minZoom,
+			};
+			
+			// create a new map
+			map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+			
+			// create a geocoder for converting addresses to locations
+			geocoder = new google.maps.Geocoder();
 
-		// set the options for the directions renderer
-		var rendererOptions = {
-			preserveViewport: true,
-			suppressMarkers: true,
-			draggable: false,
-			polylineOptions: {
-				clickable: false,
-				strokeColor: '#ffffff',
-				strokeOpacity: 0.6,
-				strokeWeight: 1
+			// set the options for the directions renderer
+			var rendererOptions = {
+				preserveViewport: true,
+				suppressMarkers: true,
+				draggable: false,
+				polylineOptions: {
+					clickable: false,
+					strokeColor: '#ffffff',
+					strokeOpacity: 0.6,
+					strokeWeight: 1
+				}
+			};
+
+			// create new directions service and renderer
+			directionsService = new google.maps.DirectionsService();
+			directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions);
+			    
+			// create map boundaries for the UK and fit to boundary
+			var UKSouthWest = new google.maps.LatLng(49.8527,-10.6512);
+			var UKNorthEast = new google.maps.LatLng(59.4790,1.8787);
+			UKBounds = new google.maps.LatLngBounds(UKSouthWest,UKNorthEast);
+			map.fitBounds(UKBounds);
+			
+			// name the map style and set it in use
+			var styledMapOptions = {name: "Mike's Custom Map"};
+			var myMapType = new google.maps.StyledMapType(myStyleSettings, styledMapOptions);
+			map.mapTypes.set('myStyle', myMapType);
+			map.setMapTypeId('myStyle');
+
+			// create our infowindow object to be used by the markers
+			//infowindow = new google.maps.InfoWindow();
+			
+			// create the circle to be used for highlighting search areas.
+			circle = new google.maps.Circle();
+			
+			// create marker styles
+			setCustomMarkerStyle();
+			
+			// place the home location value in the text field
+			document.getElementById("home_location_box").value = home_location_string;
+			
+			// initilise the home location, this will fire off the first 
+			// data run when complete
+			initiliaseHome();
+					
+			// Listener - Keep people within the map boundaries 
+			// TODO: a little crude, would be better to calculate nearest allowed
+			// edge and bounce them back there rather than middle.
+			google.maps.event.addListener(map, 'bounds_changed', function() {
+				if(!map.getBounds().intersects(UKBounds)){
+					map.panToBounds(UKBounds);
+				}
+			});
+		
+		}else{
+			// we do not have all required settings (properties) to continue
+			alert('GeoPlotter Error: Cannot initiliase, missing requirements (see README or use debug mode).');
+			if (debug) {
+				document.getElementById(debug_div).innerHTML += '[FATAL] Please set the following properties: xxxxx<br />\nFor more information on usage read the README.<br />\n';
 			}
-		};
-
-		// create new directions service and renderer
-		directionsService = new google.maps.DirectionsService();
-		directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions);
-		    
-		// create map boundaries for the UK and fit to boundary
-		var UKSouthWest = new google.maps.LatLng(49.8527,-10.6512);
-		var UKNorthEast = new google.maps.LatLng(59.4790,1.8787);
-		UKBounds = new google.maps.LatLngBounds(UKSouthWest,UKNorthEast);
-		map.fitBounds(UKBounds);
-		
-		// name the map style and set it in use
-		var styledMapOptions = {name: "Mike's Custom Map"};
-		var myMapType = new google.maps.StyledMapType(myStyleSettings, styledMapOptions);
-		map.mapTypes.set('myStyle', myMapType);
-		map.setMapTypeId('myStyle');
-
-		// create our infowindow object to be used by the markers
-		//infowindow = new google.maps.InfoWindow();
-		
-		// create the circle to be used for highlighting search areas.
-		circle = new google.maps.Circle();
-		
-		// create marker styles
-		setCustomMarkerStyle();
-		
-		// if we are in debugging mode display the debugging window
-		if (debug) document.getElementById("debug_partition").style.display = "block";
-		
-		// place the home location value in the text field
-		document.getElementById("home_location_box").value = home_location_string;
-		
-		// initilise the home location, this will fire off the first 
-		// data run when complete
-		initiliaseHome();
-				
-		// Listener - Keep people within the map boundaries 
-		// TODO: a little crude, would be better to calculate nearest allowed
-		// edge and bounce them back there rather than middle.
-		google.maps.event.addListener(map, 'bounds_changed', function() {
-			if(!map.getBounds().intersects(UKBounds)){
-				map.panToBounds(UKBounds);
-			}
-		});
-		// ========================================
+		}		
 	}
 	
+	// ========================================
+	// SET DEBUG (PUBLIC/PRIVILEGED)
+	// ========================================
+	// Sets debug mode and outputs to the chosen
+	// html element id.
+	// Usage: setDebug(boolean, html_element_id (optional)
+	// ========================================
+	this.setDebug = function (onoff, html_element_id) {
+		if ('boolean' === typeof onoff) {
+			debug = onoff;
+			debug_div = html_element_id;
+		}
+	}
+
 	// ========================================
 	// CLEAR DIRECTIONS METHOD (PUBLIC/PRIVILEGED)
 	// ========================================
 	// Removes directions from interface and map
 	// ========================================
 	this.clearDirections = function () {
-		// remove any current direction polyline from map and hide the directions box
+		// select the locations tab
+		jQuery("#tabs").tabs("select", "#tabs-locations");
+		// remove any current direction polyline from map and hide the directions tab
 		directionsDisplay.setMap(null);
-		document.getElementById('directions_partition').style.display = "none";
+		document.getElementById('tab-directions').style.display = "none";
 	}
 
 	// ========================================
@@ -230,7 +262,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		var dest_loc = our_locations[loc_index];
 
 		// check that this loation was plotted on the map
-		if(dest_loc.PLOTTED) {
+		if (dest_loc.PLOTTED) {
 			// grab our endpoints for the journey
 			var start = document.getElementById("home_location_box").value;
 			var end = new google.maps.LatLng(dest_loc.LATITUDE, dest_loc.LONGITUDE);
@@ -256,9 +288,6 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 					// we got the directions, show them on the map and list each step in the directions div
 					directionsDisplay.setDirections(result);
 					
-					// auto printing of directions in our div
-					//directionsDisplay.setPanel(document.getElementById('directions_box_standard'));
-					
 					// custom printing of directions in our div (need to add travel distance and times in ;)
 					directionsHTML = "<div style=\"font-weight: bold;\">" + dest_loc.NAME + "</div>";
 					directionsHTML += "<div style=\"font-style: italic;\">" + result.routes[0].legs[0].distance.text + " - estimated " + result.routes[0].legs[0].duration.text + "</div>";
@@ -270,22 +299,26 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 					directionsHTML += "\n</ol>";
 
 					// must display copyrights here ??
-					// show the directions partition
+					// add the directions and show the directions tab
 					document.getElementById('directions_box').innerHTML = directionsHTML;
-					document.getElementById('directions_partition').style.display = "block";
-					currentDestinationIndex = loc_index;
+					document.getElementById('tab-directions').style.display = "list-item";
+					jQuery('#tabs').tabs('select', '#tabs-directions');
+
 				}else{
 					// couldn't find directions, display a friendly if vague error
-					document.getElementById('directions_box').innerHTML = "Could not find directions!";
-					document.getElementById('directions_partition').style.display = "block";
+					document.getElementById('directions_box').innerHTML = "<div class=\"warning\"><div class=\"warning-img\"></div><div class=\"warning-txt\"><h5>NO DIRECTIONS FOUND</h5>Could not find directions to this location!</div>";
+					document.getElementById('tab-directions').style.display = "list-item";
+					jQuery('#tabs').tabs('select', '#tabs-directions');
 					
 					// remove any current direction polyline from map
 					directionsDisplay.setMap(null);
 				}
 			});
 		}else{
-			document.getElementById('directions_box').innerHTML = "This location is not plotted on the map!";
-			document.getElementById('directions_partition').style.display = "block";
+			// display message to user that this location is not plotted and show the directions tab
+			document.getElementById('directions_box').innerHTML = "<div class=\"warning\"><div class=\"warning-img\"></div><div class=\"warning-txt\"><h5>NO DIRECTIONS FOUND</h5>This location is not plotted on the map.</div>";
+			document.getElementById('tab-directions').style.display = "list-item";
+			jQuery('#tabs').tabs('select', '#tabs-directions');
 		}
 	}
 
@@ -301,7 +334,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		var clicked_loc = our_locations[loc_index];
 
 		// check that this loation was plotted on the map
-		if(clicked_loc.PLOTTED) {
+		if (clicked_loc.PLOTTED) {
 			// if not at minzoom then pan to marker
 			if (map.getZoom() > minZoom) map.panTo(markers[clicked_loc.ID].getPosition());
 			// make the marker bounce so we can identify it
@@ -345,7 +378,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 					alert("Could not find location of '" + document.getElementById("home_location_box").value + "'.\nPlease check the address and try again.");
 					
 					// display debugging info
-					if (debug) document.getElementById('debug_window').innerHTML += '[FAIL] Geocoding failed for location: ' +  document.getElementById("home_location_box").value + '<br />\n';
+					if (debug) document.getElementById(debug_div).innerHTML += '[FAIL] Geocoding failed for location: ' +  document.getElementById("home_location_box").value + '<br />\n';
 				}
 			}
 		);
@@ -370,8 +403,8 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		setRadius();
 		
 		// update/refresh the Uniform styled form elements
-		$.uniform.update("#search_radius");
-		$.uniform.update("input[name=search_criteria]");
+		jQuery.uniform.update("#search_radius");
+		jQuery.uniform.update("input[name=search_criteria]");
 
 		// gather the data now that form is cleared
 		getDataSource_AJAX();
@@ -398,12 +431,8 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 			var circleOptions = {	
 				clickable: false,
 				fillColor: '#3366FF',
-				//fillColor: '#CC0F16',
-				//fillColor: '#e76314',
 				fillOpacity: 0.15,
 				strokeColor: '#3366FF',
-				//strokeColor: '#CC0F16',
-				//strokeColor: '#e76314',
 				strokeOpacity: 0.4,
 				strokeWeight: 2,
 				center: new google.maps.LatLng(home_location.LATITUDE, home_location.LONGITUDE),
@@ -431,6 +460,22 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 	};
 	
 	// ========================================
+	// CHECK REQUIREMENTS (PRIVATE)
+	// ========================================
+	// Checks we have minimum properties set to
+	// create the map and it's controls other-
+	// wise displays a fatal and message to the 
+	// user.
+	// ========================================
+	function checkRequirements() {
+		// placeholder, pass all reqs
+		var failed = false;
+		if (failed) return false;
+		return true;
+	}
+	// ========================================
+
+	// ========================================
 	// GET DATA SOURCE AJAX METHOD (PRIVATE)
 	// ========================================
 	// Currently parameter is optional.
@@ -457,7 +502,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 					XMLRequest = new ActiveXObject("Microsoft.XMLHTTP");
 				} catch (e) {
 					// Something went wrong (TODO: MODAL HERE)
-					alert("Error: Can't create XML HTTP Request!");
+					alert("GeoPlotter Error: Can't create XML HTTP Request!");
 					return false;
 				}
 			}
@@ -482,8 +527,8 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 							JSONResponse = XMLRequest.responseText;
 							our_locations = JSON.parse(JSONResponse);
 						} catch (e) {
-							alert('Error: Did not recieve appropriate response from data connector');
-							if (debug) document.getElementById('debug_window').innerHTML += '[FATAL] ' + e.message + '<br />\n';
+							alert('GeoPlotter Error: Did not recieve appropriate response from data connector');
+							if (debug) document.getElementById(debug_div).innerHTML += '[FATAL] ' + e.message + '<br />\n';
 							return false;
 						}
 
@@ -494,7 +539,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 							our_locations.shift();
 						
 							// display some debugging info
-							if (debug) document.getElementById('debug_window').innerHTML += '<span style="font-weight: bold">[SUCCESS] Data source provided ' + our_locations.length + ' locations for plotting.</span><br />\n';
+							if (debug) document.getElementById(debug_div).innerHTML += '<span style="font-weight: bold">[SUCCESS] Data source provided ' + our_locations.length + ' locations for plotting.</span><br />\n';
 						
 							// fire off the map/interface update with the new locations
 							updateMap();
@@ -503,8 +548,8 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 							// we had an error getting the data...tell the user
 							
 							// TODO: MODAL HERE
-							alert('Error: Data connector error!');
-							if (debug) document.getElementById('debug_window').innerHTML += our_locations[0][1];
+							alert('GeoPlotter Error: Data connector error!');
+							if (debug) document.getElementById(debug_div).innerHTML += our_locations[0][1];
 							return false;
 						}
 						
@@ -517,23 +562,23 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 							JSONResponse = XMLRequest.responseText;
 							geocode_result = JSON.parse(JSONResponse);
 						} catch (e) {
-							alert('Error: Did not recieve appropriate response from data connector');
-							if (debug) document.getElementById('debug_window').innerHTML += '[FATAL] ' + e.message + '<br />\n';
+							alert('GeoPlotter Error: Did not recieve appropriate response from data connector');
+							if (debug) document.getElementById(debug_div).innerHTML += '[FATAL] ' + e.message + '<br />\n';
 						}
 						// check the geocode result and display some debugging info
 						if (geocode_result[0]) {
 							// display some debugging info for the geocode update
-							if (debug) document.getElementById('debug_window').innerHTML += geocode_result[1] + '<br />\n';
+							if (debug) document.getElementById(debug_div).innerHTML += geocode_result[1] + '<br />\n';
 						}else{
 							// TODO: MODAL HERE
-							alert('Error: Fatal data connector error!');
-							if (debug) document.getElementById('debug_window').innerHTML += geocode_result[1];
+							alert('GeoPlotter Error: Fatal data connector error!');
+							if (debug) document.getElementById(debug_div).innerHTML += geocode_result[1];
 							return false;
 						}
 					}
 				} else {
 					// server work failed, alert (TODO: change to modal)
-					alert('Error: HTTP data request failed! (' + XMLRequest.status + ')');
+					alert('GeoPlotter Error: HTTP data request failed! (' + XMLRequest.status + ': ' + self.dataConnector + ')');
 					return false;
 				}
 			}
@@ -563,7 +608,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		}
 
 		// make the request
-		XMLRequest.open("GET", "data_connectors/phossil.php" + queryString, true);
+		XMLRequest.open("GET", self.dataConnector + queryString, true);
 		XMLRequest.send(null);
 	}
 	// ========================================
@@ -654,25 +699,25 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		document.getElementById('accordion').innerHTML = accordion_content;
 		
 		// tell JQuery to create the accordion
-		$('#accordion').accordion({autoHeight: false});
+		jQuery('#accordion').accordion({autoHeight: false});
 		
 		// unbind the normal JQuery accordion click event
-		//$('#accordion').unbind('click.ui-accordion');
+		//jQuery('#accordion').unbind('click.ui-accordion');
 		
 		// a guess at the better function (don't work)
-		/*$('#accordion').bind('click', function(event, ui) {
-			if (typeof ui.newHeader != 'undefined') { $('#accordion').scrollTo( ui.newHeader ) }
+		/*jQuery('#accordion').bind('click', function(event, ui) {
+			if (typeof ui.newHeader != 'undefined') { jQuery('#accordion').scrollTo( ui.newHeader ) }
 			alert('clicked');
 		});*/
 		
 		// set the accordion to scroll to the active accordion element when it changes 
 		// (TODO: can't get it to work for accordionchangestart becuase that is subscribed to the accordion, not the !)
-		$('#accordion').bind('accordionchange', function(event, ui) {
-			if (typeof ui.newHeader != 'undefined') { $('#accordion').scrollTo( ui.newHeader ) }
+		jQuery('#accordion').bind('accordionchange', function(event, ui) {
+			if (typeof ui.newHeader != 'undefined') { jQuery('#accordion').scrollTo( ui.newHeader ) }
 		});
 		
-		// select/open the accordion tab
-		$('#tabs').tabs('select', '#tabs-1');
+		// select/open the locations accordion tab
+		jQuery('#tabs').tabs('select', '#tabs-locations');
 	}
 
 	// ========================================
@@ -698,7 +743,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		home_location.PLOTTED = false;
 		
 		// destroy the old accordion (man i love that word!)
-		$('#accordion').accordion('destroy');
+		jQuery('#accordion').accordion('destroy');
 	}
 
 	// ========================================
@@ -709,8 +754,8 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		// show a loading message in the locations listing tab
 		document.getElementById('accordion').innerHTML = '<h5 class="accordion-panel-header-warning"><span><img src="images/loading2.gif" />LOADING...</span></h5>\n';
 		
-		// select/open the accordion tab
-		$('#tabs').tabs('select', '#tabs-1');
+		// select/open the locations accordion tab
+		jQuery('#tabs').tabs('select', '#tabs-locations');
 	}
 
 	// ========================================
@@ -744,14 +789,14 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 					if ((our_locations[i].LATITUDE == null) || (our_locations[i].LONGITUDE == null)) {
 							geocodeLocation(our_locations[i], function(original_location) {addMarker(original_location, drop);});
 					}else{
-						//if (debug) document.getElementById('debug_window').innerHTML += '[INFO] Using DB coords for for location: ' + our_locations[i].ID + ' ' + our_locations[i].NAME + '<br />\n';
+						//if (debug) document.getElementById(debug_div).innerHTML += '[INFO] Using DB coords for for location: ' + our_locations[i].ID + ' ' + our_locations[i].NAME + '<br />\n';
 						addMarker(our_locations[i], drop); 
 					}
 				}
 			}
 		}else{
 			// display an warning in the locations tab
-			document.getElementById('accordion').innerHTML = '<div class="warning"><div class="warning-img"></div><div class="warning-txt"><h5>NO LOCATIONS FOUND</h5><a class="link" href="#" onclick="'+instanceName+'clearSearchCriteria()"> Click to remove the filter</a> or <a class="link" href="#" onclick="$(\'#tabs\').tabs(\'select\', \'#tabs-2\');">broaden your search.</a></div></div>'
+			document.getElementById('accordion').innerHTML = '<div class="warning"><div class="warning-img"></div><div class="warning-txt"><h5>NO LOCATIONS FOUND</h5><a class="link" href="#" onclick="'+instanceName+'clearSearchCriteria()"> Click to remove the filter</a> or <a class="link" href="#" onclick="jQuery(\'#tabs\').tabs(\'select\', \'#tabs-filter\');">broaden your search.</a></div></div>'
 		}
 	}
 
@@ -809,7 +854,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 				// add listener for marker click
 				google.maps.event.addListener(marker, 'click', function() {
 					// open the associated accordion item (info windows are soooo last year!)
-					$("#accordion").accordion("activate", $('#acc_' + location.ID));
+					jQuery("#accordion").accordion("activate", jQuery('#acc_' + location.ID));
 				});
 							
 				// add listener for marker mouseover
@@ -835,14 +880,14 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 				//marker.setMap(map);
 
 				// debugging info
-				//if (debug) document.getElementById('debug_window').innerHTML += '[SUCCESS] Placed marker on map for: ' + location.ID + ' ' + location.NAME + '<br />\n';
+				//if (debug) document.getElementById(debug_div).innerHTML += '[SUCCESS] Placed marker on map for: ' + location.ID + ' ' + location.NAME + '<br />\n';
 
 			}else{
 				// failed to plot this location, it has no longitude and latitude		
 				location.PLOTTED = false;
 
 				// debugging info
-				if (debug) document.getElementById('debug_window').innerHTML += '[FAIL] Could not place marker on map (no coords) for: ' + location.ID + ' ' + location.NAME + '<br />\n';
+				if (debug) document.getElementById(debug_div).innerHTML += '[FAIL] Could not place marker on map (no coords) for: ' + location.ID + ' ' + location.NAME + '<br />\n';
 			}
 
 			// ARE WE FINISHED YET?
@@ -861,7 +906,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 			}
 		}else{
 			// this location is already plotted, show a message thus
-			if (debug) document.getElementById('debug_window').innerHTML += '[IGNORE] Location marker already exists for: ' + location.ID + ' ' + location.NAME + '<br />\n';
+			if (debug) document.getElementById(debug_div).innerHTML += '[IGNORE] Location marker already exists for: ' + location.ID + ' ' + location.NAME + '<br />\n';
 		}
 	}
 
@@ -881,7 +926,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 			if ((our_locations[loc_index].LATITUDE == null) || (our_locations[loc_index].LONGITUDE == null)) {
 				geocodeLocation(our_locations[loc_index], function(original_location) {addMarker(original_location, drop);});
 			}else{
-				//if (debug) document.getElementById('debug_window').innerHTML += '[INFO] Using DB coords for for location: ' + our_locations[loc_index].ID + ' ' + our_locations[loc_index].NAME + '<br />\n';
+				//if (debug) document.getElementById(debug_div).innerHTML += '[INFO] Using DB coords for for location: ' + our_locations[loc_index].ID + ' ' + our_locations[loc_index].NAME + '<br />\n';
 				addMarker(our_locations[loc_index], drop);
 			}
 		};
@@ -945,13 +990,13 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 					if ((location.TYPE != 'HOME') && (location.TYPE != 'HQ')) getDataSource_AJAX("?action=geocode&lid="+location.ID+"&lat="+location.LATITUDE+"&lng="+location.LONGITUDE);
 					
 					// display debugging info
-					if (debug) document.getElementById('debug_window').innerHTML += '[SUCCESS] Geocoding successful for location: ' + location.ID + ' ' + location.NAME + '<br />\n';								
+					if (debug) document.getElementById(debug_div).innerHTML += '[SUCCESS] Geocoding successful for location: ' + location.ID + ' ' + location.NAME + '<br />\n';								
 					
 					// set the plotted status
 					plotted = true;
 				}else{	
 					// display debugging info
-					if (debug) document.getElementById('debug_window').innerHTML += '[FAIL] Geocoding failed for location: ' + location.ID + ' ' + location.NAME + '<br />\n';
+					if (debug) document.getElementById(debug_div).innerHTML += '[FAIL] Geocoding failed for location: ' + location.ID + ' ' + location.NAME + '<br />\n';
 					
 					// set the plotted status
 					plotted = false;
@@ -982,7 +1027,7 @@ function GeoPlotter(instanceName, mapDiv, controlDiv) {
 		//var R = 6371; // mean radius of the earth in km
 
 		// display debugging info
-		if (debug) document.getElementById('debug_window').innerHTML += '[INFO] Calculating distance for location: ' + location.ID + ' ' + location.NAME + '<br />\n';
+		if (debug) document.getElementById(debug_div).innerHTML += '[INFO] Calculating distance for location: ' + location.ID + ' ' + location.NAME + '<br />\n';
 		
 		// check that both locations have lat and lng otherwise abandon
 		if (!location.LATITUDE || !home_location.LATITUDE || !location.LONGITUDE || !home_location.LONGITUDE) return null;

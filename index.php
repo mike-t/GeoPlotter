@@ -1,26 +1,29 @@
 <?php
 // ============================================
-// Google Map APIv3 Sample v3.1
+// GeoPlotter 3.0 API Sample v3.1
 // ============================================
 // AUTHOR: Michael Walton
 // UPDATED: 11.04.2011
 // ============================================
 // TODO:
-// * Geocodes need to fail outside of bounds, not just be preferential!
+
 // * display a key for location icons
-// * display tooltips on hover
+// * change icon color/size and zoom, pan then bounce (after pan) on viewing/selection  <----!!!!
+// * display decent tooltips on hover (instant)	
 // * add copyright to directions (mandatory?)
 // * protect data from mining (encrypt it)
 // * setDataSource method (DB, csv, etc)
 // * default to geographical location for home if not set (http://code.google.com/apis/maps/documentation/javascript/basics.html#DetectingUserLocation)
-// * change icon color/size on viewing/selection
+// * Geocodes need to fail outside of bounds, not just be preferential!
 // * navigating map at less than full zoom pings the scroll bar to the bottom of the page!!?
 // * use a modal for warnings / no results (can modal only span a div?)
 // * show provided services with tick box list on right hand sideof acc content div (split address div in twain)
 // * stick directions in a tab
 // * protect data_connector from being run by any other source/script (using a key along with referrer)
-// * initialise should require the name of the control div and the map div
+// * initialise should require the name of the control div and the map div ? or perhaps set these properties
 // * error handling to show error in place of loading for fatals.
+// * create a location object type.
+// * pull in google js through the Geoplotter object (i.e. make it a complete wrapper)
 // ============================================
 
 // initialise variables
@@ -60,7 +63,7 @@ mysql_close($db);
 		<link rel="stylesheet" href="style/geoplotter.css" />
 		<link rel="stylesheet" href="style/uniform.default.css" media="screen" />
 
-		<!-- Import Google Maps API, Geoplotter Engine, JQuery/JQueryUI and Uniform -->
+		<!-- Import Google Maps API, Geoplotter API, JQuery/JQueryUI and Uniform -->
 		<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false" charset="utf-8"></script>
 		<script type="text/javascript" src="js/geoplotter.js" charset="utf-8"></script>
 		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js" charset="utf-8"></script>
@@ -82,7 +85,8 @@ mysql_close($db);
 			// form styling with Uniform (uniformjs.com)
 			$("input, textarea, select, button").uniform();	
 			
-			// initialise GeoPlotter
+			// initialise GeoPlotter with debugging turned on
+			gp.setDebug(true, 'debug_window');
 			gp.initialise();
 		});
 		</script>
@@ -106,20 +110,21 @@ mysql_close($db);
 			<div class="control_panel">
 				<div id="tabs" class="ui-tabs">
 					<ul class="ui-tabs-nav">
-						<li><a href="#tabs-1">Locations</a></li>
-						<li><a href="#tabs-2">Filter</a></li>
+						<li><a href="#tabs-locations">Locations</a></li>
+						<li><a href="#tabs-filter">Filter</a></li>
+						<li id="tab-directions" style="display: none;"><a href="#tabs-directions">Directions</a></li>
 					</ul>
-					<div id="tabs-1" class="ui-tabs-panel">
+					<div id="tabs-locations" class="ui-tabs-panel">
 						<div id="accordion-filter-message"></div>
 						<!-- the locations listed in accordian style for space saving -->
 						<div id="accordion" class="accordion-panel">						
 						</div>
-					</div>
+					</div>					
 					<!-- our search/filter panel -->
-					<div id="tabs-2" class="ui-tabs-panel">
+					<div id="tabs-filter" class="ui-tabs-panel">
 						<h4>My location: 
 						<input type="text" id="home_location_box" value=""/>&nbsp;<input type="button" value="Update" onclick="gp.setHome();"/>
-						</h4>					
+						</h4>
 						<!-- Our search criteria form -->
 						<form method="post" action="./" id="search_form" >
 							<h4>Only show locations with: </h4>
@@ -140,6 +145,9 @@ mysql_close($db);
 							</div>
 						</form>
 					</div>
+					<div id="tabs-directions" class="ui-tabs-panel">
+						<div id="directions_box" class="directions-panel">No directions have been requested.</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -147,7 +155,7 @@ mysql_close($db);
 		<!-- A container for our directions when requested -->
 		<div id="directions_partition" class="partition" style="display: none; width: 590px;">
 			<h4 id="directions_heading">Directions</h4>
-			<div id="directions_box"></div>
+			<!-- <div id="directions_box"></div>-->
 			<!-- for autoprinting of standard style directions -->
 			<!--<div id="directions_box_standard" style="width: 640px;"></div>-->
 		</div>
@@ -158,7 +166,7 @@ mysql_close($db);
 		</div>
 		
 		<!-- Debugging Information -->
-		<div id="debug_partition" class="partition" style="display: none;">
+		<div id="debug_partition" class="partition" style="display: block;">
 			<h4 id="directions_heading">Debugging Information</h4>
 			<div id="debug_window"></div>
 		</div>

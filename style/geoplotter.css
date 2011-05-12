@@ -163,9 +163,15 @@ table.tb_data td {
 	margin-top: 20px;
 }
 
-#directions_box{
+.directions-panel{
 	font-size: 12px;
+	padding-top: 20px;
+	padding-right: 10px;
+	overflow-x: none;
+	overflow-y: auto;
+	height: 730px;	/* minus 20 for the padding */
 }
+
 /* forms customisation */
 form ul {
 	list-style: none;
@@ -240,6 +246,7 @@ form label {
 .ui-tabs .ui-tabs-hide {
 	display: none;
 }
+
 /* ========================================*/
 
 
