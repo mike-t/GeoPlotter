@@ -85,8 +85,11 @@ mysql_close($db);
 			// form styling with Uniform (uniformjs.com)
 			$("input, textarea, select, button").uniform();	
 			
-			// initialise GeoPlotter with debugging turned on
+			// initialise GeoPlotter with debugging turned on, our chose data connector and the id of the element we
+			// want the locations to appear.
 			gp.setDebug(true, 'debug_window');
+			gp.dataConnector = 'data_connectors/phossil.php';
+			gp.locationsElement = 'accordion';
 			gp.initialise();
 		});
 		</script>
@@ -117,7 +120,7 @@ mysql_close($db);
 					<div id="tabs-locations" class="ui-tabs-panel">
 						<div id="accordion-filter-message"></div>
 						<!-- the locations listed in accordian style for space saving -->
-						<div id="accordion" class="accordion-panel">						
+						<div id="accordion" class="accordion-panel">
 						</div>
 					</div>					
 					<!-- our search/filter panel -->

@@ -69,7 +69,13 @@ function GeoPlotter(instanceName) {
 	var radius = '';
 	var minZoom = 6;
 	var first_run = true;
-	var myStyleSettings = [
+	
+	// ========================================
+	// INITIALISE PUBLIC PROPERTIES
+	// ========================================
+	this.dataConnector = '';	// the path to the data connector to use with GeoPlotter
+	this.locationsElement = '';	// the id of the html object to populate with a jquery accordion of locations
+	this.mapStyle = [		// default style to apply to Google map
 	  {
 		featureType: "administrative",
 		elementType: "all",
@@ -81,7 +87,6 @@ function GeoPlotter(instanceName) {
 		elementType: "all",
 		stylers: [
 		  { visibility: "off" },
-		  //{ hue: "#2e302f" },
 		  { hue: "#b7b7b7" },
 		  { saturation: -100 },
 		  { lightness: -70 }
@@ -116,11 +121,6 @@ function GeoPlotter(instanceName) {
 	  }
 	];
 	
-	// ========================================
-	// INITIALISE PUBLIC PROPERTIES
-	// ========================================
-	this.dataConnector = 'data_connectors/phossil.php';
-	
 	// ========================================	
 	// PUBLIC CONSTUCTORS FOR PRIVATE METHODS
 	// ========================================
@@ -150,7 +150,7 @@ function GeoPlotter(instanceName) {
 				mapTypeControl: false,
 				scaleControl: false,
 				streetViewControl: false,
-				minZoom: minZoom,
+				minZoom: minZoom
 			};
 			
 			// create a new map
@@ -184,7 +184,7 @@ function GeoPlotter(instanceName) {
 			
 			// name the map style and set it in use
 			var styledMapOptions = {name: "Mike's Custom Map"};
-			var myMapType = new google.maps.StyledMapType(myStyleSettings, styledMapOptions);
+			var myMapType = new google.maps.StyledMapType(self.mapStyle, styledMapOptions);
 			map.mapTypes.set('myStyle', myMapType);
 			map.setMapTypeId('myStyle');
 
