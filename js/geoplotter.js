@@ -69,13 +69,7 @@ function GeoPlotter(instanceName) {
 	var radius = '';
 	var minZoom = 6;
 	var first_run = true;
-	
-	// ========================================
-	// INITIALISE PUBLIC PROPERTIES
-	// ========================================
-	this.dataConnector = '';	// the path to the data connector to use with GeoPlotter
-	this.locationsElement = '';	// the id of the html object to populate with a jquery accordion of locations
-	this.mapStyle = [		// default style to apply to Google map
+	var defaultMapStyle = [		// default style to apply to Google map
 	  {
 		featureType: "administrative",
 		elementType: "all",
@@ -120,6 +114,12 @@ function GeoPlotter(instanceName) {
 		]
 	  }
 	];
+	
+	// ========================================
+	// INITIALISE PUBLIC PROPERTIES
+	// ========================================
+	this.dataConnector = '';	// the path to the data connector to use with GeoPlotter
+	this.locationsElement = '';	// the id of the html object to populate with a jquery accordion of locations
 	
 	// ========================================	
 	// PUBLIC CONSTUCTORS FOR PRIVATE METHODS
@@ -182,11 +182,8 @@ function GeoPlotter(instanceName) {
 			UKBounds = new google.maps.LatLngBounds(UKSouthWest,UKNorthEast);
 			map.fitBounds(UKBounds);
 			
-			// name the map style and set it in use
-			var styledMapOptions = {name: "Mike's Custom Map"};
-			var myMapType = new google.maps.StyledMapType(self.mapStyle, styledMapOptions);
-			map.mapTypes.set('myStyle', myMapType);
-			map.setMapTypeId('myStyle');
+			// set the map style
+			setMapStyle(defaultMapStyle);
 
 			// create our infowindow object to be used by the markers
 			//infowindow = new google.maps.InfoWindow();
@@ -234,6 +231,20 @@ function GeoPlotter(instanceName) {
 			debug = onoff;
 			debug_div = html_element_id;
 		}
+	}
+
+	// ========================================
+	// SET DEBUG (PUBLIC/PRIVILEGED)
+	// ========================================
+	// name the map style and set it in use
+	// Usage: setDebug(boolean, html_element_id (optional)
+	// ========================================
+	this.setMapStyle = function (userMapStyle) {
+		// name the map and set it in use with provided style
+		var styledMapOptions = {name: "GeoPlotter Map"};
+		var myMapType = new google.maps.StyledMapType(userMapStyle, styledMapOptions);
+		map.mapTypes.set('GeoPlotterStyle', myMapType);
+		map.setMapTypeId('GeoPlotterStyle');
 	}
 
 	// ========================================
