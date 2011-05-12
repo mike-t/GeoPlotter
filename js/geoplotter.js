@@ -62,14 +62,14 @@ function GeoPlotter(instanceName) {
 	var UKBounds;
 	var directionDisplay;
 	var directionsService;
-	var ifa_image;
-	var rcm_image;
 	var infowindow;
+	var loc_image;
+	var home_image;
 	var circle;
 	var radius = '';
 	var minZoom = 6;
 	var first_run = true;
-	var defaultMapStyle = [		// default style to apply to Google map
+	var mapStyle = [		// default style to apply to Google map
 	  {
 		featureType: "administrative",
 		elementType: "all",
@@ -182,18 +182,15 @@ function GeoPlotter(instanceName) {
 			UKBounds = new google.maps.LatLngBounds(UKSouthWest,UKNorthEast);
 			map.fitBounds(UKBounds);
 			
-			// set the map style
-			setMapStyle(defaultMapStyle);
+			// set the default GeoPlotter map style
+			self.setMapStyle(mapStyle);
 
 			// create our infowindow object to be used by the markers
 			//infowindow = new google.maps.InfoWindow();
 			
 			// create the circle to be used for highlighting search areas.
 			circle = new google.maps.Circle();
-			
-			// create marker styles
-			setCustomMarkerStyle();
-			
+						
 			// place the home location value in the text field
 			document.getElementById("home_location_box").value = home_location_string;
 			
@@ -210,13 +207,7 @@ function GeoPlotter(instanceName) {
 				}
 			});
 		
-		}else{
-			// we do not have all required settings (properties) to continue
-			alert('GeoPlotter Error: Cannot initiliase, missing requirements (see README or use debug mode).');
-			if (debug) {
-				document.getElementById(debug_div).innerHTML += '[FATAL] Please set the following properties: xxxxx<br />\nFor more information on usage read the README.<br />\n';
-			}
-		}		
+		}
 	}
 	
 	// ========================================
@@ -224,29 +215,72 @@ function GeoPlotter(instanceName) {
 	// ========================================
 	// Sets debug mode and outputs to the chosen
 	// html element id.
+	//
 	// Usage: setDebug(boolean, html_element_id (optional)
 	// ========================================
 	this.setDebug = function (onoff, html_element_id) {
-		if ('boolean' === typeof onoff) {
+		if (typeof onoff === 'boolean') {
 			debug = onoff;
 			debug_div = html_element_id;
+		}else{
+			showDebug('[FAIL] Invalid parameter supplied for function: setDebug(' +  onoff + ', ' + html_element_id + ')');
 		}
 	}
 
 	// ========================================
-	// SET DEBUG (PUBLIC/PRIVILEGED)
+	// SET MAP STYLE (PUBLIC/PRIVILEGED)
 	// ========================================
 	// name the map style and set it in use
-	// Usage: setDebug(boolean, html_element_id (optional)
+	// See: http://code.google.com/apis/maps/documentation/javascript/maptypes.html#StyledMaps
+	//
+	// Usage: setMapStyle(googleMapStyle options)
 	// ========================================
-	this.setMapStyle = function (userMapStyle) {
+	this.setMapStyle = function (googleMapStyle) {
+		
+		// override the defualt/current style
+		mapStyle = googleMapStyle;
+		
 		// name the map and set it in use with provided style
-		var styledMapOptions = {name: "GeoPlotter Map"};
-		var myMapType = new google.maps.StyledMapType(userMapStyle, styledMapOptions);
+		var styledMapOptions = {name: "GeoPlotter Map"};		
+		var myMapType = new google.maps.StyledMapType(mapStyle, styledMapOptions);
 		map.mapTypes.set('GeoPlotterStyle', myMapType);
 		map.setMapTypeId('GeoPlotterStyle');
 	}
 
+	// ========================================
+	// SET HOME MARKER METHOD (PUBLIC/PRIVILIGED)
+	// Sets the styling for the various map markers
+	// ========================================
+	this.setHomeMarker = function (filepath, width, height) {
+
+		// set the image, size, origin and anchor point for the marker (x,y)
+		if ((typeof width === 'number') && (typeof height === 'number')) {
+			home_image = new google.maps.MarkerImage(filepath,
+				new google.maps.Size(width, height),
+				new google.maps.Point(0,0),
+				new google.maps.Point(Math.floor(width/2), Math.floor(height/2)));
+		}else{
+			showDebug('[FAIL] Invalid parameter supplied for function: setHomeMarker(' +  filepath + ', ' + width + ',' + height + ')');
+		}
+	}
+	
+	// ========================================
+	// SET LOCATION MARKER METHOD (PUBLIC/PRIVILIGED)
+	// Sets the styling for the various map markers
+	// ========================================
+	this.setLocationMarker = function (filepath, width, height) {
+
+		// set the image, size, origin and anchor point for the marker (x,y)
+		if ((typeof width === 'number') && (typeof height === 'number')) {
+			loc_image = new google.maps.MarkerImage(filepath,
+				new google.maps.Size(width, height),
+				new google.maps.Point(0,0),
+				new google.maps.Point(Math.floor(width/2), Math.floor(height/2)));
+		}else{
+			showDebug('[FAIL] Invalid parameter supplied for function: setLocationMarker(' +  filepath + ', ' + width + ',' + height + ')');
+		}
+	}
+	
 	// ========================================
 	// CLEAR DIRECTIONS METHOD (PUBLIC/PRIVILEGED)
 	// ========================================
@@ -389,7 +423,7 @@ function GeoPlotter(instanceName) {
 					alert("Could not find location of '" + document.getElementById("home_location_box").value + "'.\nPlease check the address and try again.");
 					
 					// display debugging info
-					if (debug) document.getElementById(debug_div).innerHTML += '[FAIL] Geocoding failed for location: ' +  document.getElementById("home_location_box").value + '<br />\n';
+					showDebug('[FAIL] Geocoding failed for location: ' +  document.getElementById("home_location_box").value);
 				}
 			}
 		);
@@ -479,12 +513,42 @@ function GeoPlotter(instanceName) {
 	// user.
 	// ========================================
 	function checkRequirements() {
-		// placeholder, pass all reqs
-		var failed = false;
-		if (failed) return false;
+		// requirement check flag 
+		var check_ok = true;
+		var message = '[FATAL] GeoPlotter requirements check failed! The following were not set correctly: ';
+
+		// examine the required fields
+		if ((self.dataConnector === '') || (typeof self.dataConnector !== 'string')) {
+			message += 'Property: dataConnector(string), '
+			check_ok = false;
+		}
+
+		// tidy message to remove comma and whitespace
+		message.substring(0, message.length - 2);
+		
+		// to add:
+		// SET TABS
+		// MAP ELEMENT
+		// CONTROL PANEL (OR IT'S ELEMENTS)
+		
+		// if check failed alert the user, this is fatal.
+		if (!check_ok) {
+			alert('GeoPlotter Error: Cannot initiliase, missing requirements (see README or use debug mode).');
+			showDebug(message + '<br />\nFor more information on usage read the README.');
+			return false;
+		}
+		
+		// succcessful check
 		return true;
 	}
+
 	// ========================================
+	// SHOW DEBUG (PRIVATE)
+	// ========================================
+	// Handles the debugging output if switched on
+	function showDebug(message) {
+		if (debug) document.getElementById(debug_div).innerHTML += message + '<br />\n';
+	}
 
 	// ========================================
 	// GET DATA SOURCE AJAX METHOD (PRIVATE)
@@ -539,7 +603,7 @@ function GeoPlotter(instanceName) {
 							our_locations = JSON.parse(JSONResponse);
 						} catch (e) {
 							alert('GeoPlotter Error: Did not recieve appropriate response from data connector');
-							if (debug) document.getElementById(debug_div).innerHTML += '[FATAL] ' + e.message + '<br />\n';
+							showDebug('[FATAL] ' + e.message);
 							return false;
 						}
 
@@ -550,7 +614,7 @@ function GeoPlotter(instanceName) {
 							our_locations.shift();
 						
 							// display some debugging info
-							if (debug) document.getElementById(debug_div).innerHTML += '<span style="font-weight: bold">[SUCCESS] Data source provided ' + our_locations.length + ' locations for plotting.</span><br />\n';
+							showDebug('<span style="font-weight: bold">[SUCCESS] Data source provided ' + our_locations.length + ' locations for plotting.</span>');
 						
 							// fire off the map/interface update with the new locations
 							updateMap();
@@ -560,7 +624,7 @@ function GeoPlotter(instanceName) {
 							
 							// TODO: MODAL HERE
 							alert('GeoPlotter Error: Data connector error!');
-							if (debug) document.getElementById(debug_div).innerHTML += our_locations[0][1];
+							showDebug(our_locations[0][1]);
 							return false;
 						}
 						
@@ -574,16 +638,16 @@ function GeoPlotter(instanceName) {
 							geocode_result = JSON.parse(JSONResponse);
 						} catch (e) {
 							alert('GeoPlotter Error: Did not recieve appropriate response from data connector');
-							if (debug) document.getElementById(debug_div).innerHTML += '[FATAL] ' + e.message + '<br />\n';
+							showDebug('[FATAL] ' + e.message);
 						}
 						// check the geocode result and display some debugging info
 						if (geocode_result[0]) {
 							// display some debugging info for the geocode update
-							if (debug) document.getElementById(debug_div).innerHTML += geocode_result[1] + '<br />\n';
+							showDebug(geocode_result[1]);
 						}else{
 							// TODO: MODAL HERE
 							alert('GeoPlotter Error: Fatal data connector error!');
-							if (debug) document.getElementById(debug_div).innerHTML += geocode_result[1];
+							showDebug(geocode_result[1]);
 							return false;
 						}
 					}
@@ -622,7 +686,6 @@ function GeoPlotter(instanceName) {
 		XMLRequest.open("GET", self.dataConnector + queryString, true);
 		XMLRequest.send(null);
 	}
-	// ========================================
 	
 	// ========================================
 	// INITIALISE HOME (PRIVATE)
@@ -800,7 +863,7 @@ function GeoPlotter(instanceName) {
 					if ((our_locations[i].LATITUDE == null) || (our_locations[i].LONGITUDE == null)) {
 							geocodeLocation(our_locations[i], function(original_location) {addMarker(original_location, drop);});
 					}else{
-						//if (debug) document.getElementById(debug_div).innerHTML += '[INFO] Using DB coords for for location: ' + our_locations[i].ID + ' ' + our_locations[i].NAME + '<br />\n';
+						//showDebug('[INFO] Using DB coords for for location: ' + our_locations[i].ID + ' ' + our_locations[i].NAME);
 						addMarker(our_locations[i], drop); 
 					}
 				}
@@ -830,11 +893,11 @@ function GeoPlotter(instanceName) {
 				// decide which marker image to use
 				var marker_image;
 				switch(location.TYPE) {
-					case 'IFA':
-						marker_image = ifa_dot;
+					case 'LOC':
+						marker_image = loc_image;
 						break;
 					case 'HOME':
-						marker_image = home_dot;
+						marker_image = home_image;
 						break;
 				}
 
@@ -891,14 +954,14 @@ function GeoPlotter(instanceName) {
 				//marker.setMap(map);
 
 				// debugging info
-				//if (debug) document.getElementById(debug_div).innerHTML += '[SUCCESS] Placed marker on map for: ' + location.ID + ' ' + location.NAME + '<br />\n';
+				//showDebug('[SUCCESS] Placed marker on map for: ' + location.ID + ' ' + location.NAME);
 
 			}else{
 				// failed to plot this location, it has no longitude and latitude		
 				location.PLOTTED = false;
 
 				// debugging info
-				if (debug) document.getElementById(debug_div).innerHTML += '[FAIL] Could not place marker on map (no coords) for: ' + location.ID + ' ' + location.NAME + '<br />\n';
+				showDebug('[FAIL] Could not place marker on map (no coords) for: ' + location.ID + ' ' + location.NAME);
 			}
 
 			// ARE WE FINISHED YET?
@@ -917,7 +980,7 @@ function GeoPlotter(instanceName) {
 			}
 		}else{
 			// this location is already plotted, show a message thus
-			if (debug) document.getElementById(debug_div).innerHTML += '[IGNORE] Location marker already exists for: ' + location.ID + ' ' + location.NAME + '<br />\n';
+			showDebug('[IGNORE] Location marker already exists for: ' + location.ID + ' ' + location.NAME);
 		}
 	}
 
@@ -937,31 +1000,10 @@ function GeoPlotter(instanceName) {
 			if ((our_locations[loc_index].LATITUDE == null) || (our_locations[loc_index].LONGITUDE == null)) {
 				geocodeLocation(our_locations[loc_index], function(original_location) {addMarker(original_location, drop);});
 			}else{
-				//if (debug) document.getElementById(debug_div).innerHTML += '[INFO] Using DB coords for for location: ' + our_locations[loc_index].ID + ' ' + our_locations[loc_index].NAME + '<br />\n';
+				//showDebug('[INFO] Using DB coords for for location: ' + our_locations[loc_index].ID + ' ' + our_locations[loc_index].NAME);
 				addMarker(our_locations[loc_index], drop);
 			}
 		};
-	}
-
-	// ========================================
-	// SET CUSTOM MARKER STYLE METHOD (PRIVATE)
-	// Sets the styling for the various map markers
-	// ========================================
-	function setCustomMarkerStyle() {
-
-		// IFA IMAGE STYLES
-		// set the image, size, origin and anchor point for the marker (x,y)		
-		ifa_dot = new google.maps.MarkerImage('images/IFA_dot.png',
-			new google.maps.Size(10, 10),
-			new google.maps.Point(0,0),
-			new google.maps.Point(5, 5));
-				
-		// HOME IMAGE STYLES
-		// set the image, size, origin and anchor point for the marker (x,y)
-		home_dot = new google.maps.MarkerImage('images/HOME_dot.png',
-			new google.maps.Size(15, 15),
-			new google.maps.Point(0,0),
-			new google.maps.Point(7, 7));
 	}
 
 	// ========================================
@@ -1001,13 +1043,13 @@ function GeoPlotter(instanceName) {
 					if ((location.TYPE != 'HOME') && (location.TYPE != 'HQ')) getDataSource_AJAX("?action=geocode&lid="+location.ID+"&lat="+location.LATITUDE+"&lng="+location.LONGITUDE);
 					
 					// display debugging info
-					if (debug) document.getElementById(debug_div).innerHTML += '[SUCCESS] Geocoding successful for location: ' + location.ID + ' ' + location.NAME + '<br />\n';								
+					showDebug('[SUCCESS] Geocoding successful for location: ' + location.ID + ' ' + location.NAME);								
 					
 					// set the plotted status
 					plotted = true;
 				}else{	
 					// display debugging info
-					if (debug) document.getElementById(debug_div).innerHTML += '[FAIL] Geocoding failed for location: ' + location.ID + ' ' + location.NAME + '<br />\n';
+					showDebug('[FAIL] Geocoding failed for location: ' + location.ID + ' ' + location.NAME);
 					
 					// set the plotted status
 					plotted = false;
@@ -1038,7 +1080,7 @@ function GeoPlotter(instanceName) {
 		//var R = 6371; // mean radius of the earth in km
 
 		// display debugging info
-		if (debug) document.getElementById(debug_div).innerHTML += '[INFO] Calculating distance for location: ' + location.ID + ' ' + location.NAME + '<br />\n';
+		showDebug('[INFO] Calculating distance for location: ' + location.ID + ' ' + location.NAME);
 		
 		// check that both locations have lat and lng otherwise abandon
 		if (!location.LATITUDE || !home_location.LATITUDE || !location.LONGITUDE || !home_location.LONGITUDE) return null;
