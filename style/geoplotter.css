@@ -33,7 +33,7 @@ hr {
 	width: 100%
 }
 
-.map_panel{ 
+.map_panel { 
 	float: left;
 	width: 610px;
 	height: 810px;
@@ -49,6 +49,7 @@ hr {
 }
 .table_panel{}
 
+/* REQUIRED to be 100% */
 .map_canvas { 
 	height: 100%;
 	width: 100%; 
@@ -252,7 +253,7 @@ form label {
 
 /* simplify the jquery accordion */
 /* ========================================*/
-#accordion  h5 a{
+.accordion-panel  h5 a{
 	display: block;
 	font-weight: normal;
 	text-decoration: none;
